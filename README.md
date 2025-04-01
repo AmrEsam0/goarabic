@@ -1,7 +1,5 @@
 
 # GoArabic
-[![Build Status](https://travis-ci.org/01walid/goarabic.svg)](https://travis-ci.org/01walid/goarabic)  [![GoDoc](https://godoc.org/github.com/01walid/goarabic?status.svg)](https://godoc.org/github.com/01walid/goarabic)
-
 A Go Lang package for dealing with Arabic text.
 
 This is an initial work on a set of Go functions developed to enhance Arabic web applications.
@@ -22,20 +20,11 @@ shouldn't this be a separated package, along with other functionalities? I guess
 - Strip Tatweel
 - rune-wise (UTF-8) reverse of the Arabic text, leaving out the Latin one.
 
-## Todo
-- Arabic text normalization (Unshaping)
-- Add support for some special Quran text characters in Glyphs
-- Richer SmartLengh, ignoring some special characters.
-- Slugify: a simple Arabic slug generation. Striping Tashkeel and other special chars.
-- Spell numbers in Arabic idiom.
-- Present dates in Arabic or Hijri and convert Hijri date into Unix timestamp
-And maybe more...
-
 ## Usage
 
 ### Importing
 ```go
-go get github.com/01walid/goarabic
+go get github.com/AmrEsam0/goarabic
 ```
 ##### Example Usage
 ```go
@@ -43,12 +32,13 @@ package main
 
 import (
     "fmt"
-    "github.com/01walid/goarabic"
+    "github.com/AmrEsam0/goarabic"
 )
 
 func main() {
     fmt.Println(goarabic.RemoveTashkeel("نًصٌ عَربيُّ"))
     fmt.Println(goarabic.ToGlyph("تجربة النص العربي"))
+	fmt.Println(goarabic.FixBidiText("نص عربي then some English وبعدها ارقام 123456"))
 }
 
 ```
