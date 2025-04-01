@@ -31,16 +31,15 @@ go get github.com/AmrEsam0/goarabic
 package main
 
 import (
-    "fmt"
-    "github.com/AmrEsam0/goarabic"
+	"fmt"
+	"github.com/AmrEsam0/goarabic"
 )
 
 func main() {
-    fmt.Println(goarabic.RemoveTashkeel("نًصٌ عَربيُّ"))
-    fmt.Println(goarabic.ToGlyph("تجربة النص العربي"))
+	fmt.Println(goarabic.RemoveTashkeel("نًصٌ عَربيُّ"))
+	fmt.Println(goarabic.ToGlyph("تجربة النص العربي"))
 	fmt.Println(goarabic.FixBidiText("نص عربي then some English وبعدها ارقام 123456"))
 }
-
 ```
 ## Documentation
 Package docs available on [gopkgdoc](https://godoc.org/github.com/01walid/goarabic).
