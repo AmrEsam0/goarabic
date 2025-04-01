@@ -1,6 +1,8 @@
 // Package goarabic contains utility functions for working with Arabic strings.
 package goarabic
 
+import "strings"
+
 // Reverse returns its argument string reversed rune-wise left to right.
 func Reverse(s string) string {
 	r := []rune(s)
@@ -139,7 +141,7 @@ func getHarf(char rune) Harf {
 	return Harf{Unicode: char, Isolated: char, Medium: char, Final: char}
 }
 
-//RemoveAllNonAlphabetChars deletes all characters which are not included in Arabic Alphabet
+// RemoveAllNonAlphabetChars deletes all characters which are not included in Arabic Alphabet
 func RemoveAllNonArabicChars(text string) string {
 	runes := []rune(text)
 	newText := []rune{}
@@ -209,3 +211,106 @@ func RemoveTashkeelExtended(s string) string {
 	return string(r)
 }
 */
+
+var isArabic map[rune]bool
+
+func fillIsArabicMap() {
+	if isArabic != nil {
+		return
+	}
+	isArabic = make(map[rune]bool)
+	for r := rune(0x0600); r <= rune(0x06FF); r++ {
+		isArabic[r] = true
+	}
+	for r := rune(0x0750); r <= rune(0x077F); r++ {
+		isArabic[r] = true
+	}
+	for r := rune(0x08A0); r <= rune(0x08FF); r++ {
+		isArabic[r] = true
+	}
+	for r := rune(0xFB50); r <= rune(0xFDFF); r++ {
+		isArabic[r] = true
+	}
+	for r := rune(0xFE70); r <= rune(0xFEFF); r++ {
+		isArabic[r] = true
+	}
+	for r := rune(0x10E60); r <= rune(0x10E7F); r++ {
+		isArabic[r] = true
+	}
+}
+
+// FixBidiText fixes the bidirectional text for Arabic, English and numbers in a string.
+func FixBidiText(text string) string {
+	if len(text) == 0 {
+		return text
+	}
+
+	fillIsArabicMap()
+	words := strings.Fields(text)
+	var result []string
+
+	// Process each word
+	for _, word := range words {
+		runes := []rune(word)
+		isArabicWord := false
+		for _, r := range runes {
+			if isArabic[r] {
+				isArabicWord = true
+				break
+			}
+		}
+
+		if isArabicWord {
+			// Apply Arabic transformations
+			result = append(result, Reverse(ToGlyph(word)))
+		} else {
+			// Keep English words as is (we'll handle their order later)
+			result = append(result, word)
+		}
+	}
+
+	// Reverse the entire sentence for RTL (Arabic) display
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
+	}
+
+	// Now, group and reverse consecutive English words
+	var finalResult []string
+	var englishGroup []string
+
+	for _, word := range result {
+		runes := []rune(word)
+		isEnglishWord := true
+		for _, r := range runes {
+			if isArabic[r] {
+				isEnglishWord = false
+				break
+			}
+		}
+
+		if isEnglishWord {
+			englishGroup = append(englishGroup, word)
+		} else {
+			// If we have an English group, reverse its word order before adding Arabic
+			if len(englishGroup) > 0 {
+				// Reverse the English group's word order
+				for i, j := 0, len(englishGroup)-1; i < j; i, j = i+1, j-1 {
+					englishGroup[i], englishGroup[j] = englishGroup[j], englishGroup[i]
+				}
+				finalResult = append(finalResult, englishGroup...)
+				englishGroup = nil
+			}
+			finalResult = append(finalResult, word)
+		}
+	}
+
+	// Add any remaining English words
+	if len(englishGroup) > 0 {
+		for i, j := 0, len(englishGroup)-1; i < j; i, j = i+1, j-1 {
+			englishGroup[i], englishGroup[j] = englishGroup[j], englishGroup[i]
+		}
+		finalResult = append(finalResult, englishGroup...)
+	}
+
+	return strings.Join(finalResult, " ")
+}

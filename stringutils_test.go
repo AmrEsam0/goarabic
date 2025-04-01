@@ -1,7 +1,9 @@
 // Package goarabic contains utility functions for working with strings.
 package goarabic
 
-import "testing"
+import (
+	"testing"
+)
 
 // Reverse returns its argument string reversed rune-wise left to right.
 func TestReverse(t *testing.T) {
@@ -105,5 +107,28 @@ func TestRemoveAllNonArabicChars(t *testing.T) {
 		if got != c.want {
 			t.Errorf("RemoveAllNonArabicChars(%q) == %q, want %q", c.in, got, c.want)
 		}
+	}
+}
+
+func TestFixBidiText(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "Arabic, English, and numbers",
+			in:   "نص عربي then some English وبعدها ارقام 123456",
+			want: "123456 ﻡﺎﻗرا ﺎﻫﺪﻌﺑو then some English ﻲﺑﺮﻋ ﺺﻧ",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := FixBidiText(c.in)
+			if got != c.want {
+				t.Errorf("\nInput:\n    %q\nExpected: %q\nGot:      %q", c.in, c.want, got)
+			}
+		})
 	}
 }
