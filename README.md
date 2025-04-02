@@ -38,7 +38,8 @@ import (
 func main() {
 	fmt.Println(goarabic.RemoveTashkeel("نًصٌ عَربيُّ"))
 	fmt.Println(goarabic.ToGlyph("تجربة النص العربي"))
-	fmt.Println(goarabic.FixBidiText("نص عربي then some English وبعدها ارقام 123456"))
+	// add maxCharsPerLine parameter to limit the line width for multi-line text. 0 means no limit.
+	fmt.Println(goarabic.FixBidiText("نص عربي then some English وبعدها ارقام 123456"), 0)
 }
 ```
 ## Documentation
