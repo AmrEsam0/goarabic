@@ -1,7 +1,10 @@
 // Package goarabic contains utility functions for working with Arabic strings.
 package goarabic
 
-import "strings"
+import (
+	"strings"
+	"unicode"
+)
 
 // Reverse returns its argument string reversed rune-wise left to right.
 func Reverse(s string) string {
@@ -239,78 +242,130 @@ func fillIsArabicMap() {
 	}
 }
 
-// FixBidiText fixes the bidirectional text for Arabic, English and numbers in a string.
-func FixBidiText(text string) string {
+func FixBidiText(text string, maxCharsPerLine int) string {
 	if len(text) == 0 {
 		return text
 	}
 
 	fillIsArabicMap()
-	words := strings.Fields(text)
-	var result []string
 
-	// Process each word
-	for _, word := range words {
-		runes := []rune(word)
-		isArabicWord := false
-		for _, r := range runes {
-			if isArabic[r] {
-				isArabicWord = true
-				break
-			}
-		}
-
-		if isArabicWord {
-			// Apply Arabic transformations
-			result = append(result, Reverse(ToGlyph(word)))
-		} else {
-			// Keep English words as is (we'll handle their order later)
-			result = append(result, word)
-		}
+	var lines []string
+	if maxCharsPerLine > 0 {
+		lines = splitIntoLinesByChars(text, maxCharsPerLine)
+	} else {
+		lines = []string{text}
 	}
 
-	// Reverse the entire sentence for RTL (Arabic) display
-	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
-		result[i], result[j] = result[j], result[i]
-	}
+	var processedLines []string
 
-	// Now, group and reverse consecutive English words
-	var finalResult []string
-	var englishGroup []string
+	for _, line := range lines {
+		words := strings.Fields(line)
+		var processedWords []string
 
-	for _, word := range result {
-		runes := []rune(word)
-		isEnglishWord := true
-		for _, r := range runes {
-			if isArabic[r] {
-				isEnglishWord = false
-				break
-			}
-		}
+		for _, word := range words {
+			runes := []rune(word)
+			isArabicWord := false
+			isNumericWord := true
 
-		if isEnglishWord {
-			englishGroup = append(englishGroup, word)
-		} else {
-			// If we have an English group, reverse its word order before adding Arabic
-			if len(englishGroup) > 0 {
-				// Reverse the English group's word order
-				for i, j := 0, len(englishGroup)-1; i < j; i, j = i+1, j-1 {
-					englishGroup[i], englishGroup[j] = englishGroup[j], englishGroup[i]
+			// Check if word contains Arabic characters or is numeric
+			for _, r := range runes {
+				if isArabic[r] {
+					isArabicWord = true
 				}
-				finalResult = append(finalResult, englishGroup...)
-				englishGroup = nil
+				if !isNumeric(r) {
+					isNumericWord = false
+				}
 			}
-			finalResult = append(finalResult, word)
+
+			switch {
+			case isNumericWord:
+				// Leave numeric words as-is for both Arabic and Western digits
+				processedWords = append(processedWords, word)
+			case isArabicWord:
+				// Process and reverse Arabic words
+				processedWords = append(processedWords, Reverse(ToGlyph(word)))
+			default:
+				// Leave English words as-is
+				processedWords = append(processedWords, word)
+			}
+		}
+
+		// Reverse entire line for RTL flow
+		for i, j := 0, len(processedWords)-1; i < j; i, j = i+1, j-1 {
+			processedWords[i], processedWords[j] = processedWords[j], processedWords[i]
+		}
+
+		// Reverse back consecutive English words
+		start := -1
+		for i := 0; i < len(processedWords); i++ {
+			isEnglish := true
+			for _, r := range []rune(processedWords[i]) {
+				if isArabic[r] || isNumeric(r) {
+					isEnglish = false
+					break
+				}
+			}
+
+			if isEnglish {
+				if start == -1 {
+					start = i
+				}
+			} else {
+				if start != -1 {
+					reverseSlice(processedWords[start:i])
+					start = -1
+				}
+			}
+		}
+
+		if start != -1 {
+			reverseSlice(processedWords[start:])
+		}
+
+		processedLine := strings.Join(processedWords, " ")
+		processedLines = append(processedLines, processedLine)
+	}
+
+	return strings.Join(processedLines, "\n")
+}
+
+// Helper function to check if a rune is a digit (Western or Arabic)
+func isNumeric(r rune) bool {
+	return unicode.IsDigit(r) || (r >= 0x0660 && r <= 0x0669) // Arabic numerals
+}
+func splitIntoLinesByChars(text string, maxChars int) []string {
+	var lines []string
+	var currentLine strings.Builder
+	currentLineCount := 0
+
+	words := strings.Fields(text)
+	for _, word := range words {
+		wordLen := len([]rune(word)) + 1 // +1 for space
+
+		if currentLineCount > 0 && currentLineCount+wordLen > maxChars {
+			lines = append(lines, strings.TrimSpace(currentLine.String()))
+			currentLine.Reset()
+			currentLineCount = 0
+		}
+
+		if currentLineCount == 0 {
+			currentLine.WriteString(word)
+			currentLineCount = len([]rune(word))
+		} else {
+			currentLine.WriteString(" " + word)
+			currentLineCount += wordLen
 		}
 	}
 
-	// Add any remaining English words
-	if len(englishGroup) > 0 {
-		for i, j := 0, len(englishGroup)-1; i < j; i, j = i+1, j-1 {
-			englishGroup[i], englishGroup[j] = englishGroup[j], englishGroup[i]
-		}
-		finalResult = append(finalResult, englishGroup...)
+	if currentLine.Len() > 0 {
+		lines = append(lines, strings.TrimSpace(currentLine.String()))
 	}
 
-	return strings.Join(finalResult, " ")
+	return lines
+}
+
+func reverseSlice(slice []string) {
+	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
+		slice[i], slice[j] = slice[j], slice[i]
+	}
 }
