@@ -84,7 +84,7 @@ func getCharGlyph(previousChar, currentChar, nextChar rune) rune {
 		}
 
 		if previousIn && nextIn { // between two Arabic Alphabet, return the medium glyph
-			for s, _ := range beggining_after {
+			for s := range beggining_after {
 				if s.equals(previousChar) {
 					return getHarf(currentChar).Beggining
 				}
@@ -98,7 +98,7 @@ func getCharGlyph(previousChar, currentChar, nextChar rune) rune {
 		}
 
 		if previousIn { // final (because the next is not in the Arabic Alphabet)
-			for s, _ := range beggining_after {
+			for s := range beggining_after {
 				if s.equals(previousChar) {
 					return getHarf(currentChar).Isolated
 				}
@@ -261,6 +261,7 @@ func FixBidiText(text string, maxCharsPerLine int) string {
 	for _, line := range lines {
 		words := strings.Fields(line)
 		var processedWords []string
+		lineHasArabic := false
 
 		for _, word := range words {
 			runes := []rune(word)
@@ -271,6 +272,7 @@ func FixBidiText(text string, maxCharsPerLine int) string {
 			for _, r := range runes {
 				if isArabic[r] {
 					isArabicWord = true
+					lineHasArabic = true
 				}
 				if !isNumeric(r) {
 					isNumericWord = false
@@ -290,36 +292,38 @@ func FixBidiText(text string, maxCharsPerLine int) string {
 			}
 		}
 
-		// Reverse entire line for RTL flow
-		for i, j := 0, len(processedWords)-1; i < j; i, j = i+1, j-1 {
-			processedWords[i], processedWords[j] = processedWords[j], processedWords[i]
-		}
+		if lineHasArabic {
+			// Reverse entire line for RTL flow
+			for i, j := 0, len(processedWords)-1; i < j; i, j = i+1, j-1 {
+				processedWords[i], processedWords[j] = processedWords[j], processedWords[i]
+			}
 
-		// Reverse back consecutive English words
-		start := -1
-		for i := 0; i < len(processedWords); i++ {
-			isEnglish := true
-			for _, r := range []rune(processedWords[i]) {
-				if isArabic[r] || isNumeric(r) {
-					isEnglish = false
-					break
+			// Reverse back consecutive English words
+			start := -1
+			for i := 0; i < len(processedWords); i++ {
+				isEnglish := true
+				for _, r := range []rune(processedWords[i]) {
+					if isArabic[r] || isNumeric(r) {
+						isEnglish = false
+						break
+					}
+				}
+
+				if isEnglish {
+					if start == -1 {
+						start = i
+					}
+				} else {
+					if start != -1 {
+						reverseSlice(processedWords[start:i])
+						start = -1
+					}
 				}
 			}
 
-			if isEnglish {
-				if start == -1 {
-					start = i
-				}
-			} else {
-				if start != -1 {
-					reverseSlice(processedWords[start:i])
-					start = -1
-				}
+			if start != -1 {
+				reverseSlice(processedWords[start:])
 			}
-		}
-
-		if start != -1 {
-			reverseSlice(processedWords[start:])
 		}
 
 		processedLine := strings.Join(processedWords, " ")
