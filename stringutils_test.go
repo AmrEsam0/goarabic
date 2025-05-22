@@ -125,7 +125,7 @@ func TestFixBidiText(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			got := FixBidiText(c.in)
+			got := FixBidiText(c.in, 0)
 			if got != c.want {
 				t.Errorf("\nInput:\n    %q\nExpected: %q\nGot:      %q", c.in, c.want, got)
 			}
